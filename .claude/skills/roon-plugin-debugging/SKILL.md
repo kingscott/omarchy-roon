@@ -12,11 +12,13 @@ python3 -I plugin/roon-helper.py --host <core-ip>      # --port defaults to 9330
 ```
 
 It prints JSON lines. Status values: `no_host`, `connecting`, `waiting_auth`,
-`connected`, `error` (with `message`); then `zones` and `art` events. Closing
+`connected`, `error` (with `message`); then `zones`, `art`, and `art_removed`
+(cached images the helper pruned) events. Closing
 stdin makes it exit. Log lines on stderr start with `omarchy-roon:`.
 
 - `waiting_auth`: the user must enable **Omarchy Roon** in Roon under
-  **Settings > Extensions**. Needed once per Core.
+  **Settings > Extensions**. Needed once per Core. A saved token the Core no
+  longer accepts shows `connecting` for 5 seconds, then `waiting_auth`.
 - Pairing token: `~/.config/omarchy-roon/state.json`.
 - Album art cache: `$XDG_RUNTIME_DIR/omarchy-roon/art/`.
 
