@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "kingscott.roon",
+  "name": "Roon",
+  "version": "0.1.0",
+  "author": "kingscott",
+  "license": "MIT",
+  "description": "Shows what is playing on Roon, opens Roon from the album art, and moves playback between zones. Connects to your Roon Core as an extension; enable it once in Roon under Settings > Extensions.",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Roon",
+    "description": "Roon now playing, open Roon from the album art, and switch zones",
+    "category": "Audio",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "coreHost": "",
+      "corePort": 9330
+    },
+    "schema": [
+      {
+        "key": "coreHost",
+        "type": "string",
+        "label": "Roon Core address",
+        "defaultValue": "",
+        "description": "IP address or hostname of the computer running Roon Server, such as 192.168.1.20."
+      },
+      {
+        "key": "corePort",
+        "type": "integer",
+        "label": "Roon Core port",
+        "min": 1,
+        "max": 65535,
+        "step": 1,
+        "defaultValue": 9330
+      }
+    ]
+  }
+}
