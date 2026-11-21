@@ -2,11 +2,14 @@
 
 Shows what is playing on Roon in the Omarchy bar.
 
+![The plugin card open from the bar](../docs/images/plugin-card.png)
+
 - The bar shows the current track and artist.
 - Click the widget to open a card with album art, play controls, and your zones.
 - Click the album art to open Roon (or focus it if it is already open).
 - Click a zone to show it. If music is playing, it moves to that zone.
 - Middle-click the widget to play or pause. Scroll on it to skip tracks.
+- Open or close the card from a hotkey with `omarchy-shell shell toggle kingscott.roon '{}'`.
 
 ## Setup
 
@@ -38,5 +41,6 @@ library. It runs while the widget is on the bar, and only one copy runs, even wi
   the widget only loads those local files.
 - The helper connects only to the Core address you set.
 
-Editing `RoonService.qml` needs `omarchy restart shell`, because the shell keeps
-the shared service loaded across plugin reloads. Other files reload on save.
+Run `omarchy restart shell` after editing any plugin file. The shell does not
+watch files behind the symlink, and it keeps `RoonService.qml` loaded across
+plugin reloads.

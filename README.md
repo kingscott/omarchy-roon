@@ -96,6 +96,8 @@ The [`plugin/`](plugin/) folder holds an Omarchy bar widget that shows what is
 playing on Roon, opens Roon when the album art is clicked, and moves playback
 between zones. See [plugin/README.md](plugin/README.md) for setup.
 
+![Roon desktop with the Omarchy bar plugin open](docs/images/roon-desktop-with-plugin.jpg)
+
 ## Security model
 
 The launcher and its user services never request root privileges. Pacman only

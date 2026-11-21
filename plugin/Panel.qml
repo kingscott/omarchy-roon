@@ -31,6 +31,10 @@ BarWidget {
   property bool popupOpen: false
   property real maxLabelWidth: 200
 
+  // open(), close() and opened let the shell open the card from a hotkey:
+  // omarchy-shell shell toggle kingscott.roon '{}'
+  readonly property bool opened: popupOpen
+  function open() { popupOpen = true }
   function close() { popupOpen = false }
 
   function stateLabel(state) {
