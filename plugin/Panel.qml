@@ -250,6 +250,7 @@ BarWidget {
             LayoutMirroring.childrenInherit: true
 
             Button {
+              anchors.verticalCenter: parent.verticalCenter
               iconText: "󰒮"
               foreground: root.bar.foreground
               enabled: !!root.zone && root.zone.canPrevious
@@ -258,6 +259,7 @@ BarWidget {
             }
 
             Button {
+              anchors.verticalCenter: parent.verticalCenter
               iconText: root.isPlaying ? "󰏤" : "󰐊"
               foreground: root.bar.foreground
               iconSize: Style.font.iconLarge
@@ -267,6 +269,7 @@ BarWidget {
             }
 
             Button {
+              anchors.verticalCenter: parent.verticalCenter
               iconText: "󰒭"
               foreground: root.bar.foreground
               enabled: !!root.zone && root.zone.canNext
