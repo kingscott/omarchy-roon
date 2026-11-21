@@ -29,6 +29,8 @@ BarWidget {
   }
 
   property bool popupOpen: false
+  // Touchpads send many small wheel events; skip once per notch (120 units).
+  property real wheelDelta: 0
   property real maxLabelWidth: 200
 
   // open(), close() and opened let the shell open the card from a hotkey:
@@ -100,7 +102,7 @@ BarWidget {
         property bool needsScroll: implicitWidth > scrollClip.width
 
         NumberAnimation on x {
-          running: labelText.needsScroll && root.isPlaying && root.visible && !root.bar.barHidden && !root.popupOpen && !root.vertical && !Style.reduceMotion
+          running: labelText.needsScroll && root.isPlaying && root.visible && !root.popupOpen && !root.vertical && !Style.reduceMotion
           onRunningChanged: if (!running) labelText.x = 0
           loops: Animation.Infinite
           duration: Style.duration(Math.max(6000, labelText.implicitWidth * 25))
@@ -123,11 +125,13 @@ BarWidget {
       else root.popupOpen = !root.popupOpen
     }
     onWheel: function (wheel) {
-      if (wheel.angleDelta.y > 0) RoonService.control("previous")
-      else if (wheel.angleDelta.y < 0) RoonService.control("next")
+      root.wheelDelta += wheel.angleDelta.y
+      if (Math.abs(root.wheelDelta) < 120) return
+      RoonService.control(root.wheelDelta > 0 ? "previous" : "next")
+      root.wheelDelta = 0
     }
     onEntered: if (root.bar) root.bar.showTooltip(root, root.hasTrack
-      ? root.zone.title + (root.zone.artist ? " — " + root.zone.artist : "") + "\n" + root.zone.name
+      ? root.zone.title + (root.zone.artist ? " · " + root.zone.artist : "") + "\n" + root.zone.name
       : (root.statusText || strings.t("nothingPlaying")))
     onExited: if (root.bar) root.bar.hideTooltip(root)
   }

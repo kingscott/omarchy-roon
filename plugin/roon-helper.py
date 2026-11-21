@@ -122,30 +122,39 @@ class WebSocket:
 
     def recv(self):
         message = b""
-        while True:
-            b1, b2 = self._read(2)
-            fin, opcode = b1 & 0x80, b1 & 0x0F
-            length = b2 & 0x7F
-            if length == 126:
-                length = struct.unpack("!H", self._read(2))[0]
-            elif length == 127:
-                length = struct.unpack("!Q", self._read(8))[0]
-            if length + len(message) > MAX_MESSAGE:
-                raise ConnectionError("message too large")
-            mask = self._read(4) if b2 & 0x80 else None
-            payload = self._read(length)
-            if mask:
-                payload = bytes(b ^ mask[i % 4] for i, b in enumerate(payload))
-            if opcode == 0x8:
-                raise ConnectionError("closed by server")
-            if opcode == 0x9:
-                self.send(payload, opcode=0xA)
-                continue
-            if opcode == 0xA:
-                continue
-            message += payload
-            if fin:
-                return message
+        started = False
+        try:
+            while True:
+                b1, b2 = self._read(2)
+                started = True
+                fin, opcode = b1 & 0x80, b1 & 0x0F
+                length = b2 & 0x7F
+                if length == 126:
+                    length = struct.unpack("!H", self._read(2))[0]
+                elif length == 127:
+                    length = struct.unpack("!Q", self._read(8))[0]
+                if length + len(message) > MAX_MESSAGE:
+                    raise ConnectionError("message too large")
+                mask = self._read(4) if b2 & 0x80 else None
+                payload = self._read(length)
+                if mask:
+                    payload = bytes(b ^ mask[i % 4] for i, b in enumerate(payload))
+                if opcode == 0x8:
+                    raise ConnectionError("closed by server")
+                if opcode in (0x9, 0xA):
+                    if opcode == 0x9:
+                        self.send(payload, opcode=0xA)
+                    started = bool(message)
+                    continue
+                message += payload
+                if fin:
+                    return message
+        except socket.timeout:
+            # Before a frame starts, unread bytes stay in the buffer and the caller
+            # can retry. After that, part of the frame is gone with this call.
+            if started:
+                raise ConnectionError("timed out in the middle of a message") from None
+            raise
 
     def close(self):
         try:
@@ -286,7 +295,10 @@ class Session:
         if verb == "COMPLETE":
             self.callbacks.pop(key, None)
         if callback:
-            callback(name, payload or {})
+            try:
+                callback(name, payload or {})
+            except Exception as error:  # an odd reply should not end the session
+                log(f"error handling {text(name)}: {error!r}")
 
     def on_info(self, name, payload):
         core_id = text(payload.get("core_id"))
@@ -297,6 +309,15 @@ class Session:
             body["token"] = token
         self.request("com.roonlabs.registry:1/register", body, self.on_register)
         emit({"type": "status", "status": "connecting" if token else "waiting_auth", "core": self.core_name})
+        if token:
+            # A stale token gets no reply until the user enables the extension again.
+            timer = threading.Timer(5, self.prompt_if_unregistered)
+            timer.daemon = True
+            timer.start()
+
+    def prompt_if_unregistered(self):
+        if not self.registered and self.ws is not None:
+            emit({"type": "status", "status": "waiting_auth", "core": self.core_name})
 
     def on_register(self, name, payload):
         if name != "Registered":
@@ -363,11 +384,15 @@ class Session:
             with open(temporary, "wb") as f:
                 f.write(data)
             os.replace(temporary, path)
-            prune_art()
+            removed = prune_art()
+            if removed:
+                emit({"type": "art_removed", "keys": removed})
         emit({"type": "art", "key": key, "path": path})
 
 
 def prune_art():
+    """Deletes all but the newest ART_CACHE images and returns the deleted keys."""
+    removed = []
     try:
         files = sorted(
             (os.path.join(ART_DIR, n) for n in os.listdir(ART_DIR) if n.endswith(".jpg")),
@@ -375,8 +400,10 @@ def prune_art():
         )
         for old in files[:-ART_CACHE]:
             os.remove(old)
+            removed.append(os.path.basename(old)[: -len(".jpg")])
     except OSError:
         pass
+    return removed
 
 
 def read_commands(state):
@@ -391,8 +418,8 @@ def read_commands(state):
         if session:
             try:
                 session.handle_command(command)
-            except OSError as error:
-                log(f"command failed: {error}")
+            except Exception as error:  # keep reading commands whatever happens
+                log(f"command failed: {error!r}")
     os._exit(0)  # the widget closed our stdin: it is gone, so are we
 
 

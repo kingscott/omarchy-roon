@@ -9,7 +9,7 @@ import Quickshell.Io
 Item {
   id: root
 
-  readonly property string helperPath: String(Qt.resolvedUrl("roon-helper.py")).replace(/^file:\/\//, "")
+  readonly property string helperPath: decodeURIComponent(String(Qt.resolvedUrl("roon-helper.py")).replace(/^file:\/\//, ""))
 
   property int consumers: 0
   property string host: ""
@@ -75,11 +75,13 @@ Item {
     if (root.currentZone) send({ cmd: "control", zone: root.currentZone.id, control: action })
   }
 
-  // Moves what is playing to `zoneId` when something is playing elsewhere;
-  // either way the widget follows that zone from now on.
+  // Moves what is playing to `zoneId` when that zone is not already playing
+  // something of its own; either way the widget follows that zone from now on.
   function selectZone(zoneId) {
     var from = root.currentZone
-    if (from && from.id !== zoneId && from.state === "playing")
+    var to = null
+    for (var i = 0; i < root.zones.length; i++) if (root.zones[i].id === zoneId) to = root.zones[i]
+    if (from && to && from.id !== zoneId && from.state === "playing" && to.state !== "playing")
       send({ cmd: "transfer", from: from.id, to: zoneId })
     root.selectedZoneId = zoneId
   }
@@ -106,6 +108,11 @@ Item {
       var paths = Object.assign({}, root.artPaths)
       paths[String(event.key)] = String(event.path)
       root.artPaths = paths
+    } else if (event.type === "art_removed" && Array.isArray(event.keys)) {
+      // The helper pruned these files; forget them so they are fetched again.
+      var kept = Object.assign({}, root.artPaths)
+      for (var k = 0; k < event.keys.length; k++) delete kept[String(event.keys[k])]
+      root.artPaths = kept
     }
   }
 
