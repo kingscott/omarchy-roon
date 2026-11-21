@@ -4,6 +4,8 @@ Shows what is playing on Roon in the Omarchy bar.
 
 ![The plugin card open from the bar](../docs/images/plugin-card.png)
 
+![Roon desktop with the plugin open](../docs/images/roon-desktop-with-plugin.jpg)
+
 - The bar shows the current track and artist.
 - Click the widget to open a card with album art, play controls, and your zones.
 - Click the album art to open Roon (or focus it if it is already open).

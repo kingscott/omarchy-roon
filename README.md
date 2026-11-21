@@ -282,6 +282,8 @@ The [`plugin/`](plugin/) folder holds an Omarchy bar widget that shows what is
 playing on Roon, opens Roon when the album art is clicked, and moves playback
 between zones. See [plugin/README.md](plugin/README.md) for setup.
 
+![The plugin card open from the bar](docs/images/plugin-card.png)
+
 ![Roon desktop with the Omarchy bar plugin open](docs/images/roon-desktop-with-plugin.jpg)
 
 ## Troubleshooting
