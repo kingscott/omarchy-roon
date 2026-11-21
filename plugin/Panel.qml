@@ -74,7 +74,7 @@ BarWidget {
       id: glyph
       textFormat: Text.PlainText
       anchors.verticalCenter: parent.verticalCenter
-      text: !root.connected ? "󰝛" : (root.isPlaying ? "󰏤" : "󰝚")
+      text: root.connected ? "󰝚" : "󰝛"
       color: root.isPlaying ? root.bar.barForeground : Qt.darker(root.bar.barForeground, 1.5)
       font.family: root.bar.fontFamily
       font.pixelSize: Style.font.body
@@ -299,6 +299,7 @@ BarWidget {
             required property var modelData
 
             readonly property bool selected: !!root.zone && root.zone.id === modelData.id
+            readonly property bool playing: modelData.state === "playing"
 
             width: zoneList.width
             height: zoneInner.implicitHeight + Style.space(10)
@@ -315,10 +316,12 @@ BarWidget {
               anchors.leftMargin: zoneRow.borderLeft + Style.space(8)
               anchors.rightMargin: zoneRow.borderRight + Style.space(8)
               spacing: Style.space(8)
+              opacity: zoneRow.playing ? 1.0 : 0.55
 
+              // Marks the playing zone; the column stays for alignment.
               Text {
                 textFormat: Text.PlainText
-                text: zoneRow.modelData.state === "playing" ? "󰐊" : (zoneRow.modelData.state === "paused" ? "󰏤" : "󰓃")
+                text: zoneRow.playing ? "󰝚" : ""
                 color: root.bar.foreground
                 font.family: root.bar.fontFamily
                 font.pixelSize: Style.font.body
