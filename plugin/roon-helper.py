@@ -8,6 +8,7 @@ events go to stdout, commands come in on stdin. Standard library only.
 Events:   {"type": "status", "status": "...", "core": "...", "message": "..."}
           {"type": "zones", "zones": [...]}
           {"type": "art", "key": "...", "path": "..."}
+          {"type": "art_removed", "keys": ["..."]}
 Commands: {"cmd": "control", "zone": "...", "control": "playpause|next|previous"}
           {"cmd": "transfer", "from": "...", "to": "..."}
           {"cmd": "art", "key": "..."}
@@ -16,6 +17,7 @@ Commands: {"cmd": "control", "zone": "...", "control": "playpause|next|previous"
 import argparse
 import base64
 import hashlib
+import http.client
 import json
 import os
 import re
@@ -25,6 +27,8 @@ import sys
 import threading
 import time
 import urllib.request
+
+NO_PROXY = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 EXTENSION = {
     "extension_id": "kingscott.omarchy-roon",
@@ -321,10 +325,18 @@ class Session:
 
     def on_register(self, name, payload):
         if name != "Registered":
+            log(f"registration failed: {text(name)}")
             emit({"type": "status", "status": "error", "message": f"Registration failed: {text(name)}"})
+            try:  # recv() then sees EOF, ending run() so the main loop reconnects with backoff
+                self.ws.sock.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
             return
         if payload.get("core_id") and payload.get("token"):
-            save_token(text(payload["core_id"]), str(payload["token"]))
+            try:
+                save_token(text(payload["core_id"]), str(payload["token"]))
+            except OSError as error:
+                log(f"could not save token: {error}")
         self.registered = True
         emit({"type": "status", "status": "connected", "core": text(payload.get("display_name")) or self.core_name})
         self.request("com.roonlabs.transport:2/subscribe_zones", {"subscription_key": 0}, self.on_zones)
@@ -367,27 +379,39 @@ class Session:
 
     def fetch_art(self, key):
         path = os.path.join(ART_DIR, f"{key}.jpg")
+        saved = False
         if not os.path.exists(path):
             url = f"http://{self.host}:{self.port}/api/image/{key}?scale=fit&width=300&height=300&format=image/jpeg"
             try:
-                with urllib.request.urlopen(url, timeout=5) as response:
+                # The Core is on the LAN: skip any http_proxy from the environment.
+                with NO_PROXY.open(url, timeout=5) as response:
                     data = response.read(MAX_ART + 1)
-            except OSError as error:
+            except (OSError, http.client.HTTPException) as error:
                 log(f"album art fetch failed: {error}")
                 return
             if len(data) > MAX_ART or not data.startswith(b"\xff\xd8\xff"):
                 log("album art rejected: not a JPEG or too large")
                 return
-            os.makedirs(ART_DIR, mode=0o700, exist_ok=True)
             # Per-thread name: the widget can ask for the same image twice at once.
             temporary = f"{path}.{threading.get_ident()}.tmp"
-            with open(temporary, "wb") as f:
-                f.write(data)
-            os.replace(temporary, path)
+            try:
+                os.makedirs(ART_DIR, mode=0o700, exist_ok=True)
+                with open(temporary, "wb") as f:
+                    f.write(data)
+                os.replace(temporary, path)
+            except OSError as error:
+                log(f"album art save failed: {error}")
+                try:
+                    os.remove(temporary)
+                except OSError:
+                    pass
+                return
+            saved = True
+        emit({"type": "art", "key": key, "path": path})
+        if saved:  # after "art", so the widget never refetches the new key
             removed = prune_art()
             if removed:
                 emit({"type": "art_removed", "keys": removed})
-        emit({"type": "art", "key": key, "path": path})
 
 
 def prune_art():
@@ -430,7 +454,8 @@ def main():
     args = parser.parse_args()
 
     host = args.host.strip()
-    if not re.match(r"^[A-Za-z0-9.:-]{1,253}$", host):
+    # Host names and IPv4 addresses only: IPv6 literals would need brackets in URLs.
+    if not re.match(r"^[A-Za-z0-9.-]{1,253}$", host) or not 0 < args.port < 65536:
         emit({"type": "status", "status": "no_host"})
         for _ in sys.stdin:
             pass

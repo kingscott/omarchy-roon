@@ -133,7 +133,10 @@ BarWidget {
     onEntered: if (root.bar) root.bar.showTooltip(root, root.hasTrack
       ? root.zone.title + (root.zone.artist ? " · " + root.zone.artist : "") + "\n" + root.zone.name
       : (root.statusText || strings.t("nothingPlaying")))
-    onExited: if (root.bar) root.bar.hideTooltip(root)
+    onExited: {
+      root.wheelDelta = 0
+      if (root.bar) root.bar.hideTooltip(root)
+    }
   }
 
   PopupCard {

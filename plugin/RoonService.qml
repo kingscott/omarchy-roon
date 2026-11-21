@@ -55,10 +55,8 @@ Item {
 
   function detach() {
     root.consumers = Math.max(0, root.consumers - 1)
-    if (root.consumers === 0) {
-      retry.stop()
-      helper.running = false
-    }
+    // Wait a moment: when the bar rebuilds, a new widget attaches right away.
+    if (root.consumers === 0) stopDelay.restart()
   }
 
   function restart() {
@@ -77,11 +75,19 @@ Item {
 
   // Moves what is playing to `zoneId` when that zone is not already playing
   // something of its own; either way the widget follows that zone from now on.
+  // The source is the shown zone if it is playing, otherwise the only playing
+  // zone. With several other zones playing it just switches the view.
   function selectZone(zoneId) {
-    var from = root.currentZone
+    var from = root.currentZone && root.currentZone.state === "playing" ? root.currentZone : null
     var to = null
-    for (var i = 0; i < root.zones.length; i++) if (root.zones[i].id === zoneId) to = root.zones[i]
-    if (from && to && from.id !== zoneId && from.state === "playing" && to.state !== "playing")
+    var others = []
+    for (var i = 0; i < root.zones.length; i++) {
+      var zone = root.zones[i]
+      if (zone.id === zoneId) to = zone
+      else if (zone.state === "playing") others.push(zone)
+    }
+    if (!from && others.length === 1) from = others[0]
+    if (from && to && from.id !== zoneId && to.state !== "playing")
       send({ cmd: "transfer", from: from.id, to: zoneId })
     root.selectedZoneId = zoneId
   }
@@ -113,6 +119,7 @@ Item {
       var kept = Object.assign({}, root.artPaths)
       for (var k = 0; k < event.keys.length; k++) delete kept[String(event.keys[k])]
       root.artPaths = kept
+      requestArt()
     }
   }
 
@@ -120,7 +127,7 @@ Item {
     id: helper
     running: false
     stdinEnabled: true
-    command: ["python3", "-I", root.helperPath, "--host", root.host, "--port", String(root.port)]
+    command: ["python3", "-I", root.helperPath, "--host=" + root.host, "--port=" + String(root.port)]
     stdout: SplitParser { onRead: function (line) { root.handleLine(String(line)) } }
     stderr: SplitParser { onRead: function (line) { console.log(String(line)) } }
     onRunningChanged: {
@@ -128,9 +135,19 @@ Item {
         // The helper reconnects to the Core on its own; this only covers the
         // helper itself exiting.
         root.status = "error"
+        root.zones = []
         retry.interval = 5000
         retry.restart()
       }
+    }
+  }
+
+  Timer {
+    id: stopDelay
+    interval: 1000
+    onTriggered: if (root.consumers === 0) {
+      retry.stop()
+      helper.running = false
     }
   }
 

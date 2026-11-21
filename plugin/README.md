@@ -7,7 +7,8 @@ Shows what is playing on Roon in the Omarchy bar.
 - The bar shows the current track and artist.
 - Click the widget to open a card with album art, play controls, and your zones.
 - Click the album art to open Roon (or focus it if it is already open).
-- Click a zone to show it. If music is playing, it moves to that zone.
+- Click a zone to show it. If the clicked zone is not playing, the music moves
+  to it from the shown zone, or from the only other zone that is playing.
 - Middle-click the widget to play or pause. Scroll on it to skip tracks.
 - Open or close the card from a hotkey with `omarchy-shell shell toggle kingscott.roon '{}'`.
 
