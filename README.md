@@ -90,6 +90,12 @@ yay -Bi --needed .
 Then continue with `modprobe` and `roon-proton setup` from the main installation
 block above.
 
+## Omarchy bar plugin
+
+The [`plugin/`](plugin/) folder holds an Omarchy bar widget that shows what is
+playing on Roon, opens Roon when the album art is clicked, and moves playback
+between zones. See [plugin/README.md](plugin/README.md) for setup.
+
 ## Security model
 
 The launcher and its user services never request root privileges. Pacman only

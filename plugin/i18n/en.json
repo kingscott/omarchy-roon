@@ -1,0 +1,14 @@
+{
+  "status.starting": "Starting…",
+  "status.noHost": "Set the Roon Core address in this widget's settings",
+  "status.connecting": "Connecting to Roon…",
+  "status.waitingAuth": "Enable Omarchy Roon in Roon under Settings > Extensions",
+  "status.error": "Can't reach the Roon Core",
+  "nothingPlaying": "Nothing playing",
+  "openRoon": "Open Roon",
+  "zones": "Zones",
+  "state.playing": "Playing",
+  "state.paused": "Paused",
+  "state.loading": "Loading",
+  "state.stopped": "Stopped"
+}
